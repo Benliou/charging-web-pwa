@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>充電紀錄同步 Google Drive</title>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #ADADAD;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    .form-container {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .form-section {
+      flex: 1;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background-color: #5B5B5B;
+      color: #ffffff;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #E8E8E8;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #ffffff;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>車輛能源紀錄</h1>
+
+  <div class="form-group" style="margin-bottom: 20px;">
+    <label for="vehicleType">車輛類型：</label>
+    <select id="vehicleType" onchange="switchVehicleType()">
+      <option value="electric">電動車</option>
+      <option value="gas">汽油車</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <button onclick="addRecord()">新增紀錄</button>
+    <button id="signInButton" onclick="handleAuthClick()" style="background-color: #4285f4;">登入 Google 雲端硬碟</button>
+    <button id="signOutButton" onclick="handleSignoutClick()" style="background-color: #db4437; display: none;">登出 Google 帳號</button>
+    <span id="loginStatus" style="margin-left: 10px;"></span>
+  </div>
+
+  <div class="form-container">
+    <div class="form-section">
+      <h2>時間與地點</h2>
+      <div class="form-group">
+        <label for="date">日期：</label>
+        <input type="date" id="date" required />
+      </div>
+      <div class="form-group">
+        <label for="time">時間：</label>
+        <input type="time" id="time" required />
+      </div>
+      <div class="form-group" id="mileageGroup">
+        <label for="mileage">當前里程數（公里）：</label>
+        <input type="number" id="mileage" step="1" required />
+      </div>
+      <div class="form-group" id="stationGroup">
+        <label for="station">充電站：</label>
+        <select id="station" required>
+          <option value="">請選擇充電站</option>
+          <option value="EVOASIS">EVOASIS</option>
+          <option value="特爾">特爾</option>
+          <option value="Tesla">Tesla</option>
+          <option value="蝦趴">蝦趴</option>
+          <option value="U-POWER">U-POWER</option>
+          <option value="中科停六站">中科停六站</option>
+          <option value="中榮停車場">中榮停車場</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-section">
+      <h2 id="energyTitle">充電資訊</h2>
+      <div class="form-group">
+        <label id="priceLabel" for="price">每度電費用（元）：</label>
+        <input type="number" id="price" step="0.01" required />
+      </div>
+      <div class="form-group">
+        <label id="amountLabel" for="amount">充電度數：</label>
+        <input type="number" id="amount" step="0.01" required />
+      </div>
+      <div class="form-group">
+        <label id="totalLabel">本次充電費用：</label>
+        <div id="currentTotal" style="font-size: 1.2em; color: #4CAF50; font-weight: bold;">0 元</div>
+      </div>
+    </div>
+  </div>
+
+  <table id="recordTable">
+    <thead>
+      <tr>
+        <th>日期</th>
+        <th>時間</th>
+        <th id="stationHeader">充電站</th>
+        <th id="priceHeader">每度電費用</th>
+        <th id="amountHeader">充電度數</th>
+        <th id="totalHeader">總費用</th>
+        <th>里程數</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="recordBody"></tbody>
+  </table>
+
+  <div id="electricStats">
+    <h2>月度統計</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>月份</th>
+          <th>總度數</th>
+          <th>總費用</th>
+          <th>平均電耗(km/kWh)</th>
+        </tr>
+      </thead>
+      <tbody id="monthlyStatsBody"></tbody>
+    </table>
+  </div>
+
+  <div id="gasStats" style="display: none;">
+    <h2>月度統計</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>月份</th>
+          <th>總公升數</th>
+          <th>總費用</th>
+          <th>平均油耗(km/L)</th>
+        </tr>
+      </thead>
+      <tbody id="monthlyGasStatsBody"></tbody>
+    </table>
+  </div>
+
+  <h2>年度統計</h2>
+  <table>
+    <thead><tr><th>年度</th><th>總度數</th><th>總費用</th></tr></thead>
+    <tbody id="yearlyStatsBody"></tbody>
+  </table>
+<script>
+  // Google API 設定
+  const CLIENT_ID = '866948124568-4vud2sge0l4henps7s3t7u36agoih5qq.apps.googleusercontent.com';
+  const API_KEY = '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';
+  const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+  const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+  let tokenClient;
+  let gapiInited = false;
+  let gisInited = false;
+  let fileId = null;
+  let records = [];
+  let prices = new Set();
+
+  // 初始化 API
+  function gapiLoaded() {
+    gapi.load('client', initializeGapiClient);
+  }
+  async function initializeGapiClient() {
+    await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
+    gapiInited = true;
+    maybeEnableButtons();
+  }
+  function gisLoaded() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: '',
+    });
+    gisInited = true;
+    maybeEnableButtons();
+  }
+  function maybeEnableButtons() {
+    if (gapiInited && gisInited) {
+      document.getElementById('signInButton').style.display = 'inline-block';
+    }
+  }
+
+  function handleAuthClick() {
+    tokenClient.callback = async (resp) => {
+      if (resp.error !== undefined) throw resp;
+      document.getElementById('signInButton').style.display = 'none';
+      document.getElementById('signOutButton').style.display = 'inline-block';
+      document.getElementById('loginStatus').textContent = '已登入 Google 雲端硬碟';
+      await loadOrCreateFile();
+    };
+    if (gapi.client.getToken() === null) {
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    } else {
+      tokenClient.requestAccessToken({ prompt: '' });
+    }
+  }
+
+  function handleSignoutClick() {
+    const token = gapi.client.getToken();
+    if (token !== null) {
+      google.accounts.oauth2.revoke(token.access_token);
+      gapi.client.setToken('');
+      document.getElementById('signInButton').style.display = 'inline-block';
+      document.getElementById('signOutButton').style.display = 'none';
+      document.getElementById('loginStatus').textContent = '';
+    }
+  }
+
+  async function loadOrCreateFile() {
+    const response = await gapi.client.drive.files.list({
+      q: "name='charging_records.json' and trashed=false",
+      spaces: 'drive',
+      fields: 'files(id, name)',
+    });
+    if (response.result.files.length > 0) {
+      fileId = response.result.files[0].id;
+      const file = await gapi.client.drive.files.get({ fileId, alt: 'media' });
+      try {
+        records = JSON.parse(file.body || '[]');
+      } catch {
+        records = [];
+      }
+    } else {
+      records = [];
+      await saveToDrive(); // 建立新檔
+    }
+    records.forEach(r => prices.add(r.price));
+    initializePriceSelect();
+    displayRecords();
+  }
+
+  async function saveToDrive() {
+    const content = JSON.stringify(records);
+    if (fileId) {
+      await gapi.client.request({
+        path: `/upload/drive/v3/files/${fileId}`,
+        method: 'PATCH',
+        params: { uploadType: 'media' },
+        body: content,
+      });
+    } else {
+      const boundary = '-------314159265358979323846';
+      const metadata = { name: 'charging_records.json', mimeType: 'application/json' };
+      const multipartRequestBody =
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+        JSON.stringify(metadata) + `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n` +
+        content + `\r\n--${boundary}--`;
+
+      const response = await gapi.client.request({
+        path: '/upload/drive/v3/files',
+        method: 'POST',
+        params: { uploadType: 'multipart' },
+        headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+        body: multipartRequestBody,
+      });
+      fileId = response.result.id;
+    }
+  }
+
+  function editRecord(index) {
+    const record = records[index];
+    document.getElementById('date').value = record.date;
+    document.getElementById('time').value = record.time;
+    document.getElementById('mileage').value = record.mileage || '';
+    
+    const vehicleType = document.getElementById('vehicleType');
+    if (record.station) { // 電動車記錄
+      vehicleType.value = 'electric';
+      document.getElementById('station').value = record.station;
+    } else { // 汽油車記錄
+      vehicleType.value = 'gas';
+    }
+    switchVehicleType(); // 更新表單顯示
+    
+    document.getElementById('price').value = record.price;
+    document.getElementById('amount').value = record.amount;
+    
+    // 刪除原有記錄
+    records.splice(index, 1);
+    displayRecords();
+    calculateCurrentTotal();
+  }
+  
+  function deleteRecord(index) {
+    if (confirm('確定要刪除這筆記錄嗎？')) {
+      records.splice(index, 1);
+      displayRecords();
+      if (gapi.client.getToken() !== null) saveToDrive();
+    }
+  }
+  
+  // 修改 addRecord 函數，使其可以處理編輯後的保存
+  function addRecord() {
+    const date = document.getElementById('date').value;
+    const time = document.getElementById('time').value;
+    const mileage = parseFloat(document.getElementById('mileage').value);
+    const price = parseFloat(document.getElementById('price').value);
+    const amount = parseFloat(document.getElementById('amount').value);
+    
+    if (!date || !time || isNaN(price) || isNaN(amount) || isNaN(mileage)) {
+      alert('請填寫所有欄位');
+      return;
+    }
+    
+    const total = price * amount;
+    const record = {
+      date,
+      time,
+      price,
+      amount,
+      total,
+      mileage
+    };
+    
+    // 根據車輛類型添加額外資訊
+    if (document.getElementById('vehicleType').value === 'electric') {
+      record.station = document.getElementById('station').value;
+    }
+    
+    records.push(record);
+    displayRecords();
+    clearForm();
+    if (gapi.client.getToken() !== null) saveToDrive();
+  }
+
+  function initializePriceSelect() {
+    const priceSelect = document.getElementById('price');
+    priceSelect.innerHTML = '<option value="">請選擇或輸入金額</option>';
+    Array.from(prices).sort((a, b) => a - b).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      priceSelect.appendChild(opt);
+    });
+    const custom = document.createElement('option');
+    custom.value = 'custom';
+    custom.textContent = '自定義金額...';
+    priceSelect.appendChild(custom);
+  }
+
+  document.getElementById('price').addEventListener('change', function () {
+    if (this.value === 'custom') {
+      const customPrice = prompt('請輸入自定義金額：');
+      if (customPrice && !isNaN(customPrice)) {
+        prices.add(parseFloat(customPrice));
+        initializePriceSelect();
+        this.value = customPrice;
+        calculateCurrentTotal();
+      } else {
+        this.value = '';
+      }
+    } else {
+      calculateCurrentTotal();
+    }
+  });
+
+  document.getElementById('amount').addEventListener('input', calculateCurrentTotal);
+
+  function calculateCurrentTotal() {
+    const price = parseFloat(document.getElementById('price').value) || 0;
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    document.getElementById('currentTotal').textContent = (price * amount).toFixed(2) + ' 元';
+  }
+
+  function displayRecords() {
+    const tbody = document.getElementById('recordBody');
+    tbody.innerHTML = '';
+    records.sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time))
+      .forEach((r, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${r.date}</td>
+          <td>${r.time}</td>
+          <td>${r.station || '-'}</td>
+          <td>${r.price}</td>
+          <td>${r.amount}</td>
+          <td>${r.total.toFixed(2)}</td>
+          <td>${r.mileage || '-'}</td>
+          <td>
+            <button onclick="editRecord(${index})" style="background-color: #4CAF50; margin-right: 5px;">編輯</button>
+            <button onclick="deleteRecord(${index})" style="background-color: #f44336;">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    displayStats();
+  }
+
+  function switchVehicleType() {
+    const type = document.getElementById('vehicleType').value;
+    const isElectric = type === 'electric';
+    
+    // 切換顯示/隱藏相關元素
+    document.getElementById('stationGroup').style.display = isElectric ? 'block' : 'none';
+    document.getElementById('electricStats').style.display = isElectric ? 'block' : 'none';
+    document.getElementById('gasStats').style.display = isElectric ? 'none' : 'block';
+    
+    // 更新標籤文字
+    document.getElementById('energyTitle').textContent = isElectric ? '充電資訊' : '加油資訊';
+    document.getElementById('priceLabel').textContent = isElectric ? '每度電費用（元）：' : '每公升單價（元）：';
+    document.getElementById('amountLabel').textContent = isElectric ? '充電度數：' : '加油公升數：';
+    document.getElementById('totalLabel').textContent = isElectric ? '本次充電費用：' : '本次加油費用：';
+    
+    // 更新表格標題
+    document.getElementById('stationHeader').textContent = isElectric ? '充電站' : '加油站';
+    document.getElementById('priceHeader').textContent = isElectric ? '每度電費用' : '每公升單價';
+    document.getElementById('amountHeader').textContent = isElectric ? '充電度數' : '加油公升數';
+    document.getElementById('totalHeader').textContent = isElectric ? '充電費用' : '加油費用';
+    
+    // 清空表單
+    clearForm();
+  }
+
+  // 修改 displayStats 函數以計算平均電耗/油耗
+  function displayStats() {
+    const type = document.getElementById('vehicleType').value;
+    const monthlyStats = {}, yearlyStats = {};
+    let prevMileage = 0;
+    
+    records.sort((a, b) => new Date(a.date) - new Date(b.date));
+    records.forEach(r => {
+      const d = new Date(r.date);
+      const ym = `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月`;
+      const y = `${d.getFullYear()}年`;
+      
+      if (!monthlyStats[ym]) {
+        monthlyStats[ym] = { amount: 0, total: 0, mileage: 0, prevMileage: prevMileage };
+      }
+      monthlyStats[ym].amount += r.amount;
+      monthlyStats[ym].total += r.total;
+      monthlyStats[ym].mileage = r.mileage;
+      
+      if (!yearlyStats[y]) {
+        yearlyStats[y] = { amount: 0, total: 0 };
+      }
+      yearlyStats[y].amount += r.amount;
+      yearlyStats[y].total += r.total;
+      
+      prevMileage = r.mileage;
+    });
+  
+    const tbody = type === 'electric' ? document.getElementById('monthlyStatsBody') : document.getElementById('monthlyGasStatsBody');
+    tbody.innerHTML = '';
+  
+    Object.entries(monthlyStats).sort().reverse().forEach(([k, v]) => {
+      const distance = v.mileage - v.prevMileage;
+      const efficiency = distance / v.amount; // km/kWh 或 km/L
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${k}</td>
+        <td>${v.amount.toFixed(2)}</td>
+        <td>${v.total.toFixed(2)}</td>
+        <td>${efficiency.toFixed(2)}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  function clearForm() {
+    document.getElementById('date').value = '';
+    document.getElementById('time').value = '';
+    document.getElementById('station').value = '';
+    document.getElementById('price').value = '';
+    document.getElementById('amount').value = '';
+    document.getElementById('currentTotal').textContent = '0 元';
+  }
+
+  window.onload = function () {
+    gapiLoaded();
+    gisLoaded();
+  };
+</script>
+</body>
+</html>
