@@ -92,8 +92,9 @@
   <div class="form-group" style="margin-bottom: 20px;">
     <label for="vehicleType">車輛類型：</label>
     <select id="vehicleType" onchange="switchVehicleType()">
-      <option value="electric">電動車</option>
-      <option value="gas">汽油車</option>
+      <option value="electric" style="background-color: rgb(100, 171, 199);">電動車</option>
+      <option value="gasoline" style="background-color: rgba(255, 102, 0, 0.999);">汽油車</option>
+      <option value="hybrid" style="background-color: rgb(113, 128, 0);">油電混合</option>
     </select>
   </div>
 
@@ -198,7 +199,7 @@
 
   <h2>年度統計</h2>
   <table>
-    <thead><tr><th>年度</th><th>總度數</th><th>總費用</th></tr></thead>
+    <thead><tr><th>年度</th><th>總耗能</th><th>總費用</th></tr></thead>
     <tbody id="yearlyStatsBody"></tbody>
   </table>
 <script>
@@ -239,19 +240,29 @@
     }
   }
 
+  // 設定 token 的過期時間為 5 天
+  const TOKEN_EXPIRATION_DAYS = 5;
+  
   function handleAuthClick() {
-    tokenClient.callback = async (resp) => {
-      if (resp.error !== undefined) throw resp;
-      document.getElementById('signInButton').style.display = 'none';
-      document.getElementById('signOutButton').style.display = 'inline-block';
-      document.getElementById('loginStatus').textContent = '已登入 Google 雲端硬碟';
-      await loadOrCreateFile();
-    };
-    if (gapi.client.getToken() === null) {
-      tokenClient.requestAccessToken({ prompt: 'consent' });
-    } else {
-      tokenClient.requestAccessToken({ prompt: '' });
-    }
+      tokenClient.callback = async (resp) => {
+          if (resp.error !== undefined) throw resp;
+          document.getElementById('signInButton').style.display = 'none';
+          document.getElementById('signOutButton').style.display = 'inline-block';
+          document.getElementById('loginStatus').textContent = '已登入 Google 雲端硬碟';
+          const token = gapi.client.getToken();
+          if (token) {
+              const expirationTime = new Date().getTime() + TOKEN_EXPIRATION_DAYS * 24 * 60 * 60 * 1000;
+              localStorage.setItem('tokenExpiration', expirationTime);
+          }
+          await loadOrCreateFile();
+      };
+      const token = gapi.client.getToken();
+      const expirationTime = localStorage.getItem('tokenExpiration');
+      if (token === null || new Date().getTime() > expirationTime) {
+          tokenClient.requestAccessToken({ prompt: 'consent' });
+      } else {
+          tokenClient.requestAccessToken({ prompt: '' });
+      }
   }
 
   function handleSignoutClick() {
