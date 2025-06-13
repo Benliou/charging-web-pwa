@@ -4,8 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>充電紀錄同步 Google Drive</title>
-  <script src="https://apis.google.com/js/api.js"></script>
-  <script src="https://accounts.google.com/gsi/client"></script>
+  <script src="https://apis.google.com/js/api.js">
+function calculateFuelTotal() {
+  const fuelPrice = parseFloat(document.getElementById('fuelPrice')?.value) || 0;
+  const fuelLiters = parseFloat(document.getElementById('fuelLiters')?.value) || 0;
+  document.getElementById('fuelTotal').textContent = (fuelPrice * fuelLiters).toFixed(2) + ' 元';
+}
+document.getElementById('fuelPrice')?.addEventListener('input', calculateFuelTotal);
+document.getElementById('fuelLiters')?.addEventListener('input', calculateFuelTotal);
+
+</script>
+  <script src="https://accounts.google.com/gsi/client">
+function calculateFuelTotal() {
+  const fuelPrice = parseFloat(document.getElementById('fuelPrice')?.value) || 0;
+  const fuelLiters = parseFloat(document.getElementById('fuelLiters')?.value) || 0;
+  document.getElementById('fuelTotal').textContent = (fuelPrice * fuelLiters).toFixed(2) + ' 元';
+}
+document.getElementById('fuelPrice')?.addEventListener('input', calculateFuelTotal);
+document.getElementById('fuelLiters')?.addEventListener('input', calculateFuelTotal);
+
+</script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -134,38 +152,47 @@
         </select>
       </div>
     </div>
-    <div class="form-section">
-      <h2 id="energyTitle">充電資訊</h2>
-      <div class="form-group">
-        <label id="priceLabel" for="price">每度電費用（元）：</label>
-        <input type="number" id="price" step="0.01" required />
-      </div>
-      <div class="form-group">
-        <label id="amountLabel" for="amount">充電度數：</label>
-        <input type="number" id="amount" step="0.01" required />
-      </div>
-      <div class="form-group">
-        <label id="totalLabel">本次充電費用：</label>
-        <div id="currentTotal" style="font-size: 1.2em; color: #4CAF50; font-weight: bold;">0 元</div>
-      </div>
+    
+<div class="form-section" id="energySection">
+  <h2 id="energyTitle">能源資訊</h2>
+
+  <!-- 電動車與油電混合共用：每度電費與充電度數 -->
+  <div id="electricFields">
+    <div class="form-group">
+      <label for="price">每度電費用（元）：</label>
+      <input type="number" id="price" step="0.01" required />
+    </div>
+    <div class="form-group">
+      <label for="amount">充電度數：</label>
+      <input type="number" id="amount" step="0.01" required />
+    </div>
+    <div class="form-group">
+      <label>本次充電費用：</label>
+      <div id="currentTotal" style="font-size: 1.2em; color: #4CAF50; font-weight: bold;">0 元</div>
     </div>
   </div>
 
-  <table id="recordTable">
-    <thead>
-      <tr>
-        <th>日期</th>
-        <th>時間</th>
-        <th id="stationHeader">充電站</th>
-        <th id="priceHeader">每度電費用</th>
-        <th id="amountHeader">充電度數</th>
-        <th id="totalHeader">總費用</th>
-        <th>里程數</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody id="recordBody"></tbody>
-  </table>
+  <!-- 汽油車與油電混合共用：每公升單價與加油公升數 -->
+  <div id="gasFields" style="display: none;">
+    <div class="form-group">
+      <label for="fuelPrice">每公升單價（元）：</label>
+      <input type="number" id="fuelPrice" step="0.01" />
+    </div>
+    <div class="form-group">
+      <label for="fuelLiters">加油公升數：</label>
+      <input type="number" id="fuelLiters" step="0.01" />
+    </div>
+    <div class="form-group">
+      <label>本次加油費用：</label>
+      <div id="fuelTotal" style="font-size: 1.2em; color: #FFD700; font-weight: bold;">0 元</div>
+    </div>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+  
 
   <div id="electricStats">
     <h2>月度統計</h2>
@@ -201,6 +228,21 @@
   <table>
     <thead><tr><th>年度</th><th>總耗能</th><th>總費用</th></tr></thead>
     <tbody id="yearlyStatsBody"></tbody>
+  </table>
+<table id="recordTable">
+    <thead>
+      <tr>
+        <th>日期</th>
+        <th>時間</th>
+        <th id="stationHeader">充電站</th>
+        <th id="priceHeader">每度電費用</th>
+        <th id="amountHeader">充電度數</th>
+        <th id="totalHeader">總費用</th>
+        <th>里程數</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="recordBody"></tbody>
   </table>
 <script>
   // Google API 設定
@@ -390,6 +432,7 @@
     records.push(record);
     displayRecords();
     clearForm();
+  calculateFuelTotal();
     if (gapi.client.getToken() !== null) saveToDrive();
   }
 
@@ -457,29 +500,31 @@
   }
 
   function switchVehicleType() {
-    const type = document.getElementById('vehicleType').value;
-    const isElectric = type === 'electric';
-    
-    // 切換顯示/隱藏相關元素
-    document.getElementById('stationGroup').style.display = isElectric ? 'block' : 'none';
-    document.getElementById('electricStats').style.display = isElectric ? 'block' : 'none';
-    document.getElementById('gasStats').style.display = isElectric ? 'none' : 'block';
-    
-    // 更新標籤文字
-    document.getElementById('energyTitle').textContent = isElectric ? '充電資訊' : '加油資訊';
-    document.getElementById('priceLabel').textContent = isElectric ? '每度電費用（元）：' : '每公升單價（元）：';
-    document.getElementById('amountLabel').textContent = isElectric ? '充電度數：' : '加油公升數：';
-    document.getElementById('totalLabel').textContent = isElectric ? '本次充電費用：' : '本次加油費用：';
-    
-    // 更新表格標題
-    document.getElementById('stationHeader').textContent = isElectric ? '充電站' : '加油站';
-    document.getElementById('priceHeader').textContent = isElectric ? '每度電費用' : '每公升單價';
-    document.getElementById('amountHeader').textContent = isElectric ? '充電度數' : '加油公升數';
-    document.getElementById('totalHeader').textContent = isElectric ? '充電費用' : '加油費用';
-    
-    // 清空表單
-    clearForm();
+  const type = document.getElementById('vehicleType').value;
+  const stationGroup = document.getElementById('stationGroup');
+  const electricFields = document.getElementById('electricFields');
+  const gasFields = document.getElementById('gasFields');
+
+  if (type === 'electric') {
+    stationGroup.style.display = 'block';
+    electricFields.style.display = 'block';
+    gasFields.style.display = 'none';
+  } else if (type === 'gasoline') {
+    stationGroup.style.display = 'none';
+    electricFields.style.display = 'none';
+    gasFields.style.display = 'block';
+  } else if (type === 'hybrid') {
+    stationGroup.style.display = 'block';
+    electricFields.style.display = 'block';
+    gasFields.style.display = 'block';
   }
+
+  clearForm();
+  calculateCurrentTotal();
+  calculateFuelTotal();
+}
+window.onload = switchVehicleType;
+
 
   // 修改 displayStats 函數以計算平均電耗/油耗
   function displayStats() {
@@ -539,6 +584,15 @@
     gapiLoaded();
     gisLoaded();
   };
+
+function calculateFuelTotal() {
+  const fuelPrice = parseFloat(document.getElementById('fuelPrice')?.value) || 0;
+  const fuelLiters = parseFloat(document.getElementById('fuelLiters')?.value) || 0;
+  document.getElementById('fuelTotal').textContent = (fuelPrice * fuelLiters).toFixed(2) + ' 元';
+}
+document.getElementById('fuelPrice')?.addEventListener('input', calculateFuelTotal);
+document.getElementById('fuelLiters')?.addEventListener('input', calculateFuelTotal);
+
 </script>
 </body>
 </html>
