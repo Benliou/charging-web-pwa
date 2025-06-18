@@ -1,31 +1,12 @@
 <!DOCTYPE html>
-
 <html lang="zh-TW">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>充電紀錄同步 Google Drive</title>
-<script src="https://apis.google.com/js/api.js">
-function calculateFuelTotal() {
-  const fuelPrice = parseFloat(document.getElementById('fuelPrice')?.value) || 0;
-  const fuelLiters = parseFloat(document.getElementById('fuelLiters')?.value) || 0;
-  document.getElementById('fuelTotal').textContent = (fuelPrice * fuelLiters).toFixed(2) + ' 元';
-}
-document.getElementById('fuelPrice')?.addEventListener('input', calculateFuelTotal);
-document.getElementById('fuelLiters')?.addEventListener('input', calculateFuelTotal);
-
-</script>
-<script src="https://accounts.google.com/gsi/client">
-function calculateFuelTotal() {
-  const fuelPrice = parseFloat(document.getElementById('fuelPrice')?.value) || 0;
-  const fuelLiters = parseFloat(document.getElementById('fuelLiters')?.value) || 0;
-  document.getElementById('fuelTotal').textContent = (fuelPrice * fuelLiters).toFixed(2) + ' 元';
-}
-document.getElementById('fuelPrice')?.addEventListener('input', calculateFuelTotal);
-document.getElementById('fuelLiters')?.addEventListener('input', calculateFuelTotal);
-
-</script>
-<style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>充電紀錄同步 Google Drive</title>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client"></script>
+  <style>
     body {
       font-family: Arial, sans-serif;
       max-width: 900px;
@@ -106,141 +87,121 @@ document.getElementById('fuelLiters')?.addEventListener('input', calculateFuelTo
   </style>
 </head>
 <body>
-<h1>車輛能源紀錄</h1>
-<div class="form-group" style="margin-bottom: 20px;">
-<label for="vehicleType">車輛類型：</label>
-<select id="vehicleType" onchange="switchVehicleType()">
-<option style="background-color: rgb(100, 171, 199);" value="electric">電動車</option>
-<option style="background-color: rgba(255, 102, 0, 0.999);" value="gasoline">汽油車</option>
-<option style="background-color: rgb(113, 128, 0);" value="hybrid">油電混合</option>
-</select>
-</div>
-<div style="margin-bottom: 20px;">
-<button onclick="addRecord()">新增紀錄</button>
-<button id="signInButton" onclick="handleAuthClick()" style="background-color: #4285f4;">登入 Google 雲端硬碟</button>
-<button id="signOutButton" onclick="handleSignoutClick()" style="background-color: #db4437; display: none;">登出 Google 帳號</button>
-<span id="loginStatus" style="margin-left: 10px;"></span>
-</div>
-<div class="form-container">
-<div class="form-section">
-<h2>時間與地點</h2>
-<div class="form-group">
-<label for="date">日期：</label>
-<input id="date" required="" type="date"/>
-</div>
-<div class="form-group">
-<label for="time">時間：</label>
-<input id="time" required="" type="time"/>
-</div>
-<div class="form-group" id="mileageGroup">
-<label for="mileage">當前里程數（公里）：</label>
-<input id="mileage" required="" step="1" type="number"/>
-</div>
-<div class="form-group" id="stationGroup">
-<label for="station">充電站（可選擇或自行輸入）：</label>
-<select id="station">
-<option value="">（請選擇）</option>
-<option value="EVOASIS">EVOASIS</option>
-<option value="特爾">特爾</option>
-<option value="Tesla">Tesla</option>
-<option value="蝦趴">蝦趴</option>
-<option value="U-POWER">U-POWER</option>
-<option value="中科停六站">中科停六站</option>
-<option value="中榮停車場">中榮停車場</option>
-</select>
-<input id="stationCustom" placeholder="或輸入其他充電站名稱（可留空）" type="text"/>
-<option value="">請選擇充電站</option>
-<option value="EVOASIS">EVOASIS</option>
-<option value="特爾">特爾</option>
-<option value="Tesla">Tesla</option>
-<option value="蝦趴">蝦趴</option>
-<option value="U-POWER">U-POWER</option>
-<option value="中科停六站">中科停六站</option>
-<option value="中榮停車場">中榮停車場</option>
-</div>
-</div>
-<div class="form-section" id="energySection">
-<h2 id="energyTitle">能源資訊</h2>
-<!-- 電動車與油電混合共用：每度電費與充電度數 -->
-<div id="electricFields">
-<div class="form-group">
-<label for="price">每度電費用（元）：</label>
-<input id="price" required="" step="0.01" type="number"/>
-</div>
-<div class="form-group">
-<label for="amount">充電度數：</label>
-<input id="amount" required="" step="0.01" type="number"/>
-</div>
-<div class="form-group">
-<label>本次充電費用：</label>
-<div id="currentTotal" style="font-size: 1.2em; color: #4CAF50; font-weight: bold;">0 元</div>
-</div>
-</div>
-<!-- 汽油車與油電混合共用：每公升單價與加油公升數 -->
-<div id="gasFields" style="display: none;">
-<div class="form-group">
-<label for="fuelPrice">每公升單價（元）：</label>
-<input id="fuelPrice" step="0.01" type="number"/>
-</div>
-<div class="form-group">
-<label for="fuelLiters">加油公升數：</label>
-<input id="fuelLiters" step="0.01" type="number"/>
-</div>
-<div class="form-group">
-<label>本次加油費用：</label>
-<div id="fuelTotal" style="font-size: 1.2em; color: #FFD700; font-weight: bold;">0 元</div>
-</div>
-</div>
-</div>
-</div>
-<div id="electricStats">
-<h2>月度統計</h2>
-<table>
-<thead>
-<tr>
-<th>月份</th>
-<th>總度數</th>
-<th>總費用</th>
-<th>平均電耗(km/kWh)</th>
-</tr>
-</thead>
-<tbody id="monthlyStatsBody"></tbody>
-</table>
-</div>
-<div id="gasStats" style="display: none;">
-<h2>月度統計</h2>
-<table>
-<thead>
-<tr>
-<th>月份</th>
-<th>總公升數</th>
-<th>總費用</th>
-<th>平均油耗(km/L)</th>
-</tr>
-</thead>
-<tbody id="monthlyGasStatsBody"></tbody>
-</table>
-</div>
-<h2>年度統計</h2>
-<table>
-<thead><tr><th>年度</th><th>總耗能</th><th>總費用</th></tr></thead>
-<tbody id="yearlyStatsBody"></tbody>
-</table>
-<table id="recordTable">
-<thead>
-<tr>
-<th>日期</th>
-<th>時間</th>
-<th id="stationHeader">充電站</th>
-<th id="priceHeader">每度電費用</th>
-<th id="amountHeader">充電度數</th>
-<th id="totalHeader">總費用</th>
-<th>里程數</th>
-<th>操作</th>
-</tr>
-</thead>
-<tbody id="recordBody"></tbody>
-</table>
+  <h1>車輛能源紀錄</h1>
+
+  <div class="form-group" style="margin-bottom: 20px;">
+    <label for="vehicleType">車輛類型：</label>
+    <select id="vehicleType" onchange="switchVehicleType()">
+      <option value="electric" style="background-color: rgb(100, 171, 199);">電動車</option>
+      <option value="gasoline" style="background-color: rgba(255, 102, 0, 0.999);">汽油車</option>
+      <option value="hybrid" style="background-color: rgb(113, 128, 0);">油電混合</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <button onclick="addRecord()">新增紀錄</button>
+    <button id="signInButton" onclick="handleAuthClick()" style="background-color: #4285f4;">登入 Google 雲端硬碟</button>
+    <button id="signOutButton" onclick="handleSignoutClick()" style="background-color: #db4437; display: none;">登出 Google 帳號</button>
+    <span id="loginStatus" style="margin-left: 10px;"></span>
+  </div>
+
+  <div class="form-container">
+    <div class="form-section">
+      <h2>時間與地點</h2>
+      <div class="form-group">
+        <label for="date">日期：</label>
+        <input type="date" id="date" required />
+      </div>
+      <div class="form-group">
+        <label for="time">時間：</label>
+        <input type="time" id="time" required />
+      </div>
+      <div class="form-group" id="mileageGroup">
+        <label for="mileage">當前里程數（公里）：</label>
+        <input type="number" id="mileage" step="1" required />
+      </div>
+      <div class="form-group" id="stationGroup">
+        <label for="station">充電站：</label>
+        <select id="station" required>
+          <option value="">請選擇充電站</option>
+          <option value="EVOASIS">EVOASIS</option>
+          <option value="特爾">特爾</option>
+          <option value="Tesla">Tesla</option>
+          <option value="蝦趴">蝦趴</option>
+          <option value="U-POWER">U-POWER</option>
+          <option value="中科停六站">中科停六站</option>
+          <option value="中榮停車場">中榮停車場</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-section">
+      <h2 id="energyTitle">充電資訊</h2>
+      <div class="form-group">
+        <label id="priceLabel" for="price">每度電費用（元）：</label>
+        <input type="number" id="price" step="0.01" required />
+      </div>
+      <div class="form-group">
+        <label id="amountLabel" for="amount">充電度數：</label>
+        <input type="number" id="amount" step="0.01" required />
+      </div>
+      <div class="form-group">
+        <label id="totalLabel">本次充電費用：</label>
+        <div id="currentTotal" style="font-size: 1.2em; color: #4CAF50; font-weight: bold;">0 元</div>
+      </div>
+    </div>
+  </div>
+
+  <table id="recordTable">
+    <thead>
+      <tr>
+        <th>日期</th>
+        <th>時間</th>
+        <th id="stationHeader">充電站</th>
+        <th id="priceHeader">每度電費用</th>
+        <th id="amountHeader">充電度數</th>
+        <th id="totalHeader">總費用</th>
+        <th>里程數</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="recordBody"></tbody>
+  </table>
+
+  <div id="electricStats">
+    <h2>月度統計</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>月份</th>
+          <th>總度數</th>
+          <th>總費用</th>
+          <th>平均電耗(km/kWh)</th>
+        </tr>
+      </thead>
+      <tbody id="monthlyStatsBody"></tbody>
+    </table>
+  </div>
+
+  <div id="gasStats" style="display: none;">
+    <h2>月度統計</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>月份</th>
+          <th>總公升數</th>
+          <th>總費用</th>
+          <th>平均油耗(km/L)</th>
+        </tr>
+      </thead>
+      <tbody id="monthlyGasStatsBody"></tbody>
+    </table>
+  </div>
+
+  <h2>年度統計</h2>
+  <table>
+    <thead><tr><th>年度</th><th>總耗能</th><th>總費用</th></tr></thead>
+    <tbody id="yearlyStatsBody"></tbody>
+  </table>
 <script>
   // Google API 設定
   const CLIENT_ID = '866948124568-4vud2sge0l4henps7s3t7u36agoih5qq.apps.googleusercontent.com';
@@ -429,18 +390,25 @@ document.getElementById('fuelLiters')?.addEventListener('input', calculateFuelTo
     records.push(record);
     displayRecords();
     clearForm();
-  calculateFuelTotal();
     if (gapi.client.getToken() !== null) saveToDrive();
   }
 
   function initializePriceSelect() {
     const priceSelect = document.getElementById('price');
     priceSelect.innerHTML = '<option value="">請選擇或輸入金額</option>';
+    // 添加免費充電選項
+    const freeOption = document.createElement('option');
+    freeOption.value = '0';
+    freeOption.textContent = '免費充電';
+    priceSelect.appendChild(freeOption);
+    
     Array.from(prices).sort((a, b) => a - b).forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p;
-      opt.textContent = p;
-      priceSelect.appendChild(opt);
+      if (p > 0) { // 只顯示非免費的價格選項
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        priceSelect.appendChild(opt);
+      }
     });
     const custom = document.createElement('option');
     custom.value = 'custom';
@@ -472,205 +440,103 @@ document.getElementById('fuelLiters')?.addEventListener('input', calculateFuelTo
     document.getElementById('currentTotal').textContent = (price * amount).toFixed(2) + ' 元';
   }
 
-  
-function displayRecords() {
-  const tbody = document.getElementById('recordBody');
-  tbody.innerHTML = '';
-
-  // 為每筆資料加上原始索引
-  records.forEach((r, i) => r._originalIndex = i);
-
-  // 顯示排序後的畫面，但按鈕使用原始索引
-  [...records].sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time))
-    .forEach((r) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${r.date}</td>
-        <td>${r.time}</td>
-        <td>${r.station || '-'}</td>
-        <td>${r.price}</td>
-        <td>${r.amount}</td>
-        <td>${r.total?.toFixed(2) ?? '-'}</td>
-        <td>${r.mileage || '-'}</td>
-        <td>
-          <button onclick="editRecord(${r._originalIndex})" style="background-color: #4CAF50; margin-right: 5px;">編輯</button>
-          <button onclick="deleteRecord(${r._originalIndex})" style="background-color: #f44336;">刪除</button>
-        </td>
-      `;
-      tbody.appendChild(row);
-    });
-
-  displayStats();
-}
-
+  function displayRecords() {
+    const tbody = document.getElementById('recordBody');
+    tbody.innerHTML = '';
+    records.sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time))
+      .forEach((r, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${r.date}</td>
+          <td>${r.time}</td>
+          <td>${r.station || '-'}</td>
+          <td>${r.price}</td>
+          <td>${r.amount}</td>
+          <td>${r.total.toFixed(2)}</td>
+          <td>${r.mileage || '-'}</td>
+          <td>
+            <button onclick="editRecord(${index})" style="background-color: #4CAF50; margin-right: 5px;">編輯</button>
+            <button onclick="deleteRecord(${index})" style="background-color: #f44336;">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    displayStats();
+  }
 
   function switchVehicleType() {
-  const type = document.getElementById('vehicleType').value;
-  const stationGroup = document.getElementById('stationGroup');
-  const electricFields = document.getElementById('electricFields');
-  const gasFields = document.getElementById('gasFields');
-
-  if (type === 'electric') {
-    stationGroup.style.display = 'block';
-    electricFields.style.display = 'block';
-    gasFields.style.display = 'none';
-  } else if (type === 'gasoline') {
-    stationGroup.style.display = 'none';
-    electricFields.style.display = 'none';
-    gasFields.style.display = 'block';
-  } else if (type === 'hybrid') {
-    stationGroup.style.display = 'block';
-    electricFields.style.display = 'block';
-    gasFields.style.display = 'block';
+    const type = document.getElementById('vehicleType').value;
+    const isElectric = type === 'electric';
+    
+    // 切換顯示/隱藏相關元素
+    document.getElementById('stationGroup').style.display = isElectric ? 'block' : 'none';
+    document.getElementById('electricStats').style.display = isElectric ? 'block' : 'none';
+    document.getElementById('gasStats').style.display = isElectric ? 'none' : 'block';
+    
+    // 更新標籤文字
+    document.getElementById('energyTitle').textContent = isElectric ? '充電資訊' : '加油資訊';
+    document.getElementById('priceLabel').textContent = isElectric ? '每度電費用（元）：' : '每公升單價（元）：';
+    document.getElementById('amountLabel').textContent = isElectric ? '充電度數：' : '加油公升數：';
+    document.getElementById('totalLabel').textContent = isElectric ? '本次充電費用：' : '本次加油費用：';
+    
+    // 更新表格標題
+    document.getElementById('stationHeader').textContent = isElectric ? '充電站' : '加油站';
+    document.getElementById('priceHeader').textContent = isElectric ? '每度電費用' : '每公升單價';
+    document.getElementById('amountHeader').textContent = isElectric ? '充電度數' : '加油公升數';
+    document.getElementById('totalHeader').textContent = isElectric ? '充電費用' : '加油費用';
+    
+    // 清空表單
+    clearForm();
   }
-
-  clearForm();
-  calculateCurrentTotal();
-  calculateFuelTotal();
-}
-window.onload = switchVehicleType;
-
 
   // 修改 displayStats 函數以計算平均電耗/油耗
-  
-function displayStats() {
-  const type = document.getElementById('vehicleType').value;
-  const monthlyStats = {};
-  const yearlyStats = {};
-  let prevMileage = null;
-
-  records.forEach(r => {
-    const y = r.date.split('-')[0];
-    const ym = r.date.slice(0, 7);
-
-    if (!monthlyStats[ym]) {
-      monthlyStats[ym] = {
-        amount: 0,
-        freeAmount: 0,
-        total: 0,
-        mileage: 0,
-        prevMileage: prevMileage
-      };
-    }
-
-    if (type === 'electric' || (type === 'hybrid' && r.price !== undefined)) {
-      if (parseFloat(r.price) === 0) {
-        monthlyStats[ym].freeAmount += parseFloat(r.amount || 0);
-      } else {
-        monthlyStats[ym].amount += parseFloat(r.amount || 0);
-        monthlyStats[ym].total += parseFloat(r.total || 0);
-      }
-      monthlyStats[ym].mileage = parseFloat(r.mileage || 0);
-    }
-
-    if (type === 'gasoline' || (type === 'hybrid' && r.fuelPrice !== undefined)) {
-      if (!monthlyStats[ym].fuel) {
-        monthlyStats[ym].fuel = { amount: 0, total: 0 };
-      }
-      monthlyStats[ym].fuel.amount += parseFloat(r.fuelLiters || 0);
-      monthlyStats[ym].fuel.total += parseFloat(r.fuelPrice || 0) * parseFloat(r.fuelLiters || 0);
-      monthlyStats[ym].mileage = parseFloat(r.mileage || 0);
-    }
-
-    if (!yearlyStats[y]) {
-      yearlyStats[y] = { amount: 0, total: 0 };
-    }
-    yearlyStats[y].amount += parseFloat(r.amount || 0);
-    yearlyStats[y].total += parseFloat(r.total || 0);
-
-    prevMileage = parseFloat(r.mileage || 0);
-  });
-
-  const sortedStats = Object.entries(monthlyStats).sort().reverse();
-
-  if (type === 'electric') {
-    const tbody = document.getElementById('monthlyStatsBody');
-    tbody.innerHTML = '';
-    sortedStats.forEach(([k, v]) => {
-      const totalAmount = v.amount + v.freeAmount;
-      const distance = v.mileage - (v.prevMileage || 0);
-      const efficiency = totalAmount ? distance / totalAmount : 0;
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${k}</td>
-        <td>${v.amount.toFixed(2)} + ${v.freeAmount.toFixed(2)}（免費）</td>
-        <td>${v.total.toFixed(2)}</td>
-        <td>${efficiency.toFixed(2)}</td>
-      `;
-      tbody.appendChild(row);
-    });
-  }
-
-  if (type === 'gasoline') {
-    const tbody = document.getElementById('monthlyGasStatsBody');
-    tbody.innerHTML = '';
-    sortedStats.forEach(([k, v]) => {
-      const distance = v.mileage - (v.prevMileage || 0);
-      const fuel = v.fuel || { amount: 0, total: 0 };
-      const efficiency = fuel.amount ? distance / fuel.amount : 0;
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${k}</td>
-        <td>${fuel.amount.toFixed(2)}</td>
-        <td>${fuel.total.toFixed(2)}</td>
-        <td>${efficiency.toFixed(2)}</td>
-      `;
-      tbody.appendChild(row);
-    });
-  }
-
-  if (type === 'hybrid') {
-    const electricTbody = document.getElementById('hybridElectricStatsBody');
-    const gasTbody = document.getElementById('hybridGasStatsBody');
-    electricTbody.innerHTML = '';
-    gasTbody.innerHTML = '';
-
-    sortedStats.forEach(([k, v]) => {
-      const totalAmount = v.amount + v.freeAmount;
-      const distance = v.mileage - (v.prevMileage || 0);
-
-      const electricEfficiency = totalAmount ? distance / totalAmount : 0;
-      const eleRow = document.createElement('tr');
-      eleRow.innerHTML = `
-        <td>${k}</td>
-        <td>${v.amount.toFixed(2)} + ${v.freeAmount.toFixed(2)}（免費）</td>
-        <td>${v.total.toFixed(2)}</td>
-        <td>${electricEfficiency.toFixed(2)}</td>
-      `;
-      electricTbody.appendChild(eleRow);
-
-      const fuel = v.fuel || { amount: 0, total: 0 };
-      const fuelEfficiency = fuel.amount ? distance / fuel.amount : 0;
-      const gasRow = document.createElement('tr');
-      gasRow.innerHTML = `
-        <td>${k}</td>
-        <td>${fuel.amount.toFixed(2)}</td>
-        <td>${fuel.total.toFixed(2)}</td>
-        <td>${fuelEfficiency.toFixed(2)}</td>
-      `;
-      gasTbody.appendChild(gasRow);
-    });
-  }
-}
-, yearlyStats = {};
+  function displayStats() {
+    const type = document.getElementById('vehicleType').value;
+    const monthlyStats = {}, yearlyStats = {};
     let prevMileage = 0;
     
-    records.sort((a, b) => new Date(a.date) - new Date(b.date));
+    records.sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
     records.forEach(r => {
       const d = new Date(r.date);
       const ym = `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月`;
       const y = `${d.getFullYear()}年`;
       
       if (!monthlyStats[ym]) {
-        monthlyStats[ym] = { amount: 0, total: 0, mileage: 0, prevMileage: prevMileage };
+        monthlyStats[ym] = { 
+          amount: 0, 
+          total: 0, 
+          mileage: 0, 
+          prevMileage: prevMileage,
+          freeAmount: 0, // 免費充電度數
+          paidAmount: 0  // 付費充電度數
+        };
       }
+      
+      if (r.price === 0) {
+        monthlyStats[ym].freeAmount += r.amount;
+      } else {
+        monthlyStats[ym].paidAmount += r.amount;
+      }
+      
       monthlyStats[ym].amount += r.amount;
       monthlyStats[ym].total += r.total;
       monthlyStats[ym].mileage = r.mileage;
       
       if (!yearlyStats[y]) {
-        yearlyStats[y] = { amount: 0, total: 0 };
+        yearlyStats[y] = { 
+          amount: 0, 
+          total: 0,
+          freeAmount: 0,
+          paidAmount: 0
+        };
       }
+      
+      if (r.price === 0) {
+        yearlyStats[y].freeAmount += r.amount;
+      } else {
+        yearlyStats[y].paidAmount += r.amount;
+      }
+      
       yearlyStats[y].amount += r.amount;
       yearlyStats[y].total += r.total;
       
@@ -686,11 +552,24 @@ function displayStats() {
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${k}</td>
-        <td>${v.amount.toFixed(2)}</td>
+        <td>${v.amount.toFixed(2)} (免費: ${v.freeAmount.toFixed(2)}, 付費: ${v.paidAmount.toFixed(2)})</td>
         <td>${v.total.toFixed(2)}</td>
         <td>${efficiency.toFixed(2)}</td>
       `;
       tbody.appendChild(row);
+    });
+    
+    // 更新年度統計
+    const yearlyStatsBody = document.getElementById('yearlyStatsBody');
+    yearlyStatsBody.innerHTML = '';
+    Object.entries(yearlyStats).sort().reverse().forEach(([y, v]) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${y}</td>
+        <td>${v.amount.toFixed(2)} (免費: ${v.freeAmount.toFixed(2)}, 付費: ${v.paidAmount.toFixed(2)})</td>
+        <td>${v.total.toFixed(2)}</td>
+      `;
+      yearlyStatsBody.appendChild(row);
     });
   }
 
@@ -707,15 +586,6 @@ function displayStats() {
     gapiLoaded();
     gisLoaded();
   };
-
-function calculateFuelTotal() {
-  const fuelPrice = parseFloat(document.getElementById('fuelPrice')?.value) || 0;
-  const fuelLiters = parseFloat(document.getElementById('fuelLiters')?.value) || 0;
-  document.getElementById('fuelTotal').textContent = (fuelPrice * fuelLiters).toFixed(2) + ' 元';
-}
-document.getElementById('fuelPrice')?.addEventListener('input', calculateFuelTotal);
-document.getElementById('fuelLiters')?.addEventListener('input', calculateFuelTotal);
-
 </script>
 </body>
 </html>
